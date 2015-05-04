@@ -1,19 +1,22 @@
-A basic HTTP directory server with logging
-==========================================
+Serves a directory over HTTP
+============================
 
-It was simply faster for me to code one than find one on the interwebs.
-I was extremely annoyed at *python -m SimpleHTTPServer* (lack of) speed.
+I was extremely annoyed at *python -m SimpleHTTPServer* (lack of) speed so I
+wrote one.
+
+This project depends only on stdlib on purpose.
 
 
 Installation
 ------------
+
     go get github.com/maruel/serve-dir
-    go install github.com/maruel/serve-dir
 
 
 Usage
 -----
-Basic usage: serve the current directory:
+
+Serve the current directory:
 
     serve-dir
 

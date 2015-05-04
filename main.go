@@ -21,8 +21,8 @@ import (
 
 var port = flag.Int("port", 8010, "port number")
 var root_dir = flag.String("root", getWd(), "root directory")
-var timeout = flag.Int("timeout", 10, "default timeout in seconds")
-var max_size = flag.Int("max_size", 1<<20, "max transfer size")
+var timeout = flag.Int("timeout", 24*60*60, "write timeout in seconds; default 24h")
+var max_size = flag.Int("max_size", 256*1024*1024*1024, "max transfer size; default 256gb")
 
 func getWd() string {
 	wd, _ := os.Getwd()
@@ -67,9 +67,10 @@ func main() {
 	flag.Parse()
 
 	s := &http.Server{
-		Addr:           fmt.Sprintf(":%d", *port),
-		Handler:        loggingHandler{http.FileServer(http.Dir(*root_dir))},
-		ReadTimeout:    time.Duration(*timeout) * time.Second,
+		Addr:    fmt.Sprintf(":%d", *port),
+		Handler: loggingHandler{http.FileServer(http.Dir(*root_dir))},
+		// read timeout is always 10s, since it should be GETs only.
+		ReadTimeout:    10. * time.Second,
 		WriteTimeout:   time.Duration(*timeout) * time.Second,
 		MaxHeaderBytes: *max_size,
 	}
