@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-func Example_Handler() {
+func ExampleHandler() {
 	// Serves the current directory over HTTP and logs all requests.
 	log.SetFlags(log.Lmicroseconds)
 	s := &http.Server{
