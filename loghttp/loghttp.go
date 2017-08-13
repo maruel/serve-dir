@@ -14,8 +14,9 @@ import (
 	"time"
 )
 
-// Handler wraps a http.Handler and provides an hook before and after each
-// request is processed.
+// Handler wraps a http.Handler and logs the request and response.
+//
+// It handles Hijack() for websocket support.
 type Handler struct {
 	http.Handler
 
@@ -23,6 +24,8 @@ type Handler struct {
 }
 
 // ServeHTTP implements http.Handler.
+//
+// It logs the handler's HTTP status code and the response size.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	received := time.Now()
 	rwh := responseWriteHijacker{responseWriter: responseWriter{ResponseWriter: w}}
