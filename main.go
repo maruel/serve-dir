@@ -2,7 +2,7 @@
 // Use of this source code is governed under the Apache License, Version 2.0
 // that can be found in the LICENSE file.
 
-// serve-dir  serves a directory over HTTP and logs the request to stderr.
+// serve-dir serves a directory over HTTP and logs the request to stderr.
 package main
 
 import (
@@ -22,10 +22,11 @@ func getWd() string {
 }
 
 func main() {
+	// TODO(maruel): Change to -http, so it can bind to localhost.
 	port := flag.Int("port", 8010, "port number")
 	rootDir := flag.String("root", getWd(), "root directory")
 	timeout := flag.Int("timeout", 24*60*60, "write timeout in seconds; default 24h")
-	maxSize := flag.Int("max_size", 256*1024*1024*1024, "max transfer size; default 256gb")
+	maxHdrSize := flag.Int("max_size", http.DefaultMaxHeaderBytes, "max header transfer size")
 
 	log.SetFlags(log.Lmicroseconds)
 	flag.Parse()
@@ -36,7 +37,7 @@ func main() {
 		// read timeout is always 10s, since it should be GETs only.
 		ReadTimeout:    10. * time.Second,
 		WriteTimeout:   time.Duration(*timeout) * time.Second,
-		MaxHeaderBytes: *maxSize,
+		MaxHeaderBytes: *maxHdrSize,
 	}
 	log.Printf("Serving %s on port %d", *rootDir, *port)
 	log.Fatal(s.ListenAndServe())
