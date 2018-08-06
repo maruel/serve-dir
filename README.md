@@ -46,9 +46,6 @@ log.SetFlags(log.Lmicroseconds)
 s := &http.Server{
     Addr:           ":6060",
     Handler:        &loghttp.Handler{Handler: http.FileServer(http.Dir("."))},
-    ReadTimeout:    10. * time.Second,
-    WriteTimeout:   24 * 60 * 60 * time.Second,
-    MaxHeaderBytes: 256 * 1024 * 1024 * 1024,
 }
 log.Fatal(s.ListenAndServe())
 ```
