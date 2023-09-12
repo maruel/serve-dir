@@ -2,7 +2,7 @@
 // Use of this source code is governed under the Apache License, Version 2.0
 // that can be found in the LICENSE file.
 
-package loghttp
+package loghttp_test
 
 import (
 	"bytes"
@@ -13,6 +13,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/maruel/serve-dir/loghttp"
 )
 
 func ExampleHandler() {
@@ -20,7 +22,7 @@ func ExampleHandler() {
 	log.SetFlags(log.Lmicroseconds)
 	s := &http.Server{
 		Addr:           ":6060",
-		Handler:        &Handler{Handler: http.FileServer(http.Dir("."))},
+		Handler:        &loghttp.Handler{Handler: http.FileServer(http.Dir("."))},
 		ReadTimeout:    10. * time.Second,
 		WriteTimeout:   24 * 60 * 60 * time.Second,
 		MaxHeaderBytes: 256 * 1024 * 1024 * 1024,
@@ -30,7 +32,7 @@ func ExampleHandler() {
 
 func TestServeHTTP(t *testing.T) {
 	req := httptest.NewRequest("GET", "/foo", &bytes.Buffer{})
-	h := Handler{Handler: &dummy{}}
+	h := loghttp.Handler{Handler: &dummy{}}
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 	r, _ := ioutil.ReadAll(w.Result().Body)
@@ -44,4 +46,8 @@ type dummy struct {
 
 func (d *dummy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	io.WriteString(w, "hello")
+}
+
+func init() {
+	log.SetOutput(io.Discard)
 }
