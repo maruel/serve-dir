@@ -8,7 +8,7 @@ This project depends only on stdlib on purpose.
 
 ## Installation
 
-    go get github.com/maruel/serve-dir
+    go install github.com/maruel/serve-dir@latest
 
 
 ## Usage
@@ -32,11 +32,12 @@ Help with the command line arguments available:
 
 # Logging library
 
-The [http.Handler](https://golang.org/pkg/net/http/#Handler) logging code in
+The [http.Handler](https://pkg.go.dev/net/http#Handler) logging code in
 `serve-dir` is usable as a library as `github.com/maruel/serve-dir/loghttp` via
-[loghttp.Handler](https://godoc.org/github.com/maruel/serve-dir/loghttp#Handler).
+[loghttp.Handler](https://pkg.go.dev/github.com/maruel/serve-dir/loghttp#Handler).
 
-[![GoDoc](https://godoc.org/github.com/maruel/serve-dir/loghttp?status.svg)](https://godoc.org/github.com/maruel/serve-dir/loghttp)
+[![Go
+Reference](https://pkg.go.dev/badge/github.com/maruel/serve-dir/loghttp.svg)](https://pkg.go.dev/github.com/maruel/serve-dir/loghttp)
 
 Example:
 
