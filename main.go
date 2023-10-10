@@ -24,6 +24,7 @@ func getWd() string {
 func main() {
 	// TODO(maruel): Change to -http, so it can bind to localhost.
 	port := flag.Int("port", 8010, "port number")
+	quiet := flag.Bool("q", false, "don't print log lines")
 	rootDir := flag.String("root", getWd(), "root directory")
 	timeout := flag.Int("timeout", 24*60*60, "write timeout in seconds; default 24h")
 	maxHdrSize := flag.Int("max_size", http.DefaultMaxHeaderBytes, "max header transfer size")
@@ -31,9 +32,13 @@ func main() {
 	log.SetFlags(log.Lmicroseconds)
 	flag.Parse()
 
+	h := http.FileServer(http.Dir(*rootDir))
+	if !*quiet {
+		h = &loghttp.Handler{Handler: h}
+	}
 	s := &http.Server{
 		Addr:    fmt.Sprintf(":%d", *port),
-		Handler: &loghttp.Handler{Handler: http.FileServer(http.Dir(*rootDir))},
+		Handler: h,
 		// read timeout is always 10s, since it should be GETs only.
 		ReadTimeout:    10. * time.Second,
 		WriteTimeout:   time.Duration(*timeout) * time.Second,
