@@ -31,7 +31,7 @@ func ExampleHandler() {
 }
 
 func TestServeHTTP(t *testing.T) {
-	req := httptest.NewRequest("GET", "/foo", &bytes.Buffer{})
+	req := httptest.NewRequest(http.MethodGet, "/foo", &bytes.Buffer{})
 	h := loghttp.Handler{Handler: &dummy{}}
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -44,8 +44,8 @@ func TestServeHTTP(t *testing.T) {
 type dummy struct {
 }
 
-func (d *dummy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	io.WriteString(w, "hello")
+func (d *dummy) ServeHTTP(w http.ResponseWriter, _ *http.Request) {
+	_, _ = io.WriteString(w, "hello")
 }
 
 func init() {
