@@ -18,6 +18,8 @@ import (
 // It handles Hijack() for websocket support.
 type Handler struct {
 	http.Handler
+
+	_ struct{}
 }
 
 // ServeHTTP implements http.Handler.
