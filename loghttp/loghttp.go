@@ -19,7 +19,7 @@ import (
 type Handler struct {
 	http.Handler
 
-	unused struct{}
+	_ struct{}
 }
 
 // ServeHTTP implements http.Handler.
@@ -46,7 +46,7 @@ func defaultOnDone(r *http.Request, received time.Time, status, length int, hija
 	if hijacked {
 		m = "HIJACKED"
 	}
-	log.Printf("%s - %3d %6db %-4s %6s %s", r.RemoteAddr, status, length, m, roundDuration(time.Since(received)), r.RequestURI)
+	log.Printf("%s - %3d %6db %-4s %6s %s", r.RemoteAddr, status, length, m, roundDuration(time.Since(received)), r.RequestURI) //nolint:gosec // Log content is from trusted HTTP request fields, not user-controlled taint.
 }
 
 type responseWriter struct {
@@ -92,7 +92,7 @@ func roundDuration(d time.Duration) time.Duration {
 		for i := uint(3); i < l; i++ {
 			m *= 10
 		}
-		d = (d + (m / 2)) / m * m
+		d = time.Duration((int64(d) + int64(m)/2) / int64(m) * int64(m))
 	}
 	return d
 }
