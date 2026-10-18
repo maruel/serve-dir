@@ -32,6 +32,10 @@ linters:
     - usestdlibvars
     - whitespace
   settings:
+    govet:
+      disable:
+        # Newer stdlib inlining suggestions cannot target the minimum Go version.
+        - inline
     exhaustive:
       default-signifies-exhaustive: true
     gocritic:
@@ -55,6 +59,8 @@ linters:
       - builtin$
       - examples$
 formatters:
+  exclusions:
+    generated: lax
   enable:
     - gofmt
     - goimports

@@ -5,13 +5,11 @@
 on: [push, pull_request]
 name: Run tests
 jobs:
-    # Runs go test both with code coverage sent to codecov, race detector and
-    # benchmarks. At the end do a quick check to ensure the tests to not leave
-    # files in the tree.
-  test:
-    name: "test: go${{matrix.gover}}.x/${{matrix.os}}"
+  # Keep OS coverage for platform-sensitive runtime behavior.
+  check:
+    name: "check: go${{matrix.gover}}.x/${{matrix.os}}"
     runs-on: "${{matrix.os}}"
-    continue-on-error: true
+
     defaults:
       run:
         shell: bash
@@ -28,22 +26,23 @@ jobs:
     - name: Turn off git core.autocrlf
       if: matrix.os == 'windows-latest'
       run: git config --global core.autocrlf false
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
       with:
         fetch-depth: 2
-    - uses: actions/setup-go@v4
+    - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+    - uses: actions/setup-go@v7
       with:
         go-version: "~${{matrix.gover}}.0"
     - name: 'Check: go test -cover'
       if: always()
-      run: go test -timeout=5m -covermode=count -coverprofile coverage.txt -bench=. -benchtime=1x ./...
+      run: make test
       # Don't send code coverage if anything failed to reduce spam.
-    - uses: codecov/codecov-action@v3
+    - uses: codecov/codecov-action@v7
     - name: 'Cleanup'
       if: always()
       run: rm coverage.txt
     - name: 'Check: go test -race'
-      run: go test -timeout=5m -race -bench=. -benchtime=1x ./...
+      run: make test-race
       env:
         CGO_ENABLED: 1
     - name: 'Install'
@@ -55,7 +54,12 @@ jobs:
         go generate ./...
         # Also test for untracked files. go generate should not generate ignored
         # files either.
-        TOUCHED=$(git status --porcelain --ignored)
+        TOUCHED=$(git status --porcelain --ignored -- . \
+          ':(exclude).venv' ':(exclude).ruff_cache' \
+          ':(top,exclude,literal)coverage.txt' ':(top,exclude,literal)codecov' \
+          ':(top,exclude,literal)codecov.SHA256SUM' ':(top,exclude,literal)codecov.SHA256SUM.sig' \
+          ':(top,exclude,literal)codecov.exe' ':(top,exclude,literal)codecov.exe.SHA256SUM' \
+          ':(top,exclude,literal)codecov.exe.SHA256SUM.sig')
         if ! test -z "$TOUCHED"; then
           echo "go generate created these files, please fix:"
           echo "$TOUCHED"
@@ -65,86 +69,48 @@ jobs:
       if: always()
       run: |
         go mod tidy
-        TOUCHED=$(git status --porcelain --ignored)
+        TOUCHED=$(git status --porcelain --ignored -- . \
+          ':(exclude).venv' ':(exclude).ruff_cache' \
+          ':(top,exclude,literal)coverage.txt' ':(top,exclude,literal)codecov' \
+          ':(top,exclude,literal)codecov.SHA256SUM' ':(top,exclude,literal)codecov.SHA256SUM.sig' \
+          ':(top,exclude,literal)codecov.exe' ':(top,exclude,literal)codecov.exe.SHA256SUM' \
+          ':(top,exclude,literal)codecov.exe.SHA256SUM.sig')
         if ! test -z "$TOUCHED"; then
           echo "go mod tidy was not clean, please update:"
           git diff
           false
         fi
-    - name: 'go install necessary tools (ubuntu)'
-      if: always() && matrix.os == 'ubuntu-latest'
-      run: |
-        go install github.com/client9/misspell/cmd/misspell@latest
-        go install github.com/google/addlicense@latest
-    - name: 'Check: go vet'
+    - name: Set up static-check Go toolchain
       if: always()
-      run: go vet -unsafeptr=false ./...
-      # run them on ubuntu-latest since it's the fastest one.
-    - name: 'Check: no executable was committed (ubuntu)'
-      if: always() && matrix.os == 'ubuntu-latest'
-      run: |
-        if find . -path '*.sh' -prune -o \
-            -path ./.git -prune -o \
-            -path './internal/sandbox/nsjail-linux-*' -prune -o \
-            -type f -executable -print | grep -e . ; then
-          echo 'Do not commit executables beside shell scripts'
-          false
-        fi
-    - name: 'Check: addlicense; all sources have a license header (ubuntu)'
-      if: always() && matrix.os == 'ubuntu-latest'
-      run: addlicense -check -ignore 'vendor/**' .
-    - name: "Check: misspelling; code doesn't contain misspelling (ubuntu)"
-      if: always() && matrix.os == 'ubuntu-latest'
-      run: |
-        ERR=$(find . -type f | grep -v vendor/ | xargs misspell)
-        if ! test -z "$ERR"; then
-          echo "$ERR"
-          echo "## ⚠ misspell Failed" >> ../_comments.txt
-          echo "" >> ../_comments.txt
-          echo "$ERR" >> ../_comments.txt
-          echo "" >> ../_comments.txt
-          false
-        fi
-    - name: 'Send comments'
-      if: failure()
-      run: |
-        if [ -f ../_comments.txt ]; then
-          URL="${{github.event.issue.pull_request.url}}"
-          if test -z "$URL"; then
-            URL="${{github.api_url}}/repos/${{github.repository}}/commits/${{github.sha}}/comments"
-          fi
-          echo "Sending $(cat ../_comments.txt|wc -l) lines of comments to ${URL}"
-          curl -sS --request POST \
-            --header "Authorization: Bearer ${{secrets.GITHUB_TOKEN}}" \
-            --header "Content-Type: application/json" \
-            --data "$(cat ../_comments.txt | jq -R --slurp '{body: .}')" \
-            "${URL}" > /dev/null
-          rm ../_comments.txt
-        fi
-
+      uses: actions/setup-go@v7
+      with:
+        go-version: '1.27.x'
+    - name: Static checks
+      if: always()
+      env:
+        CGO_ENABLED: 1
+      run: make verify
 
   codeql:
-    name: "codeql: go${{matrix.gover}}.x/${{matrix.os}}"
+    name: "codeql: ${{matrix.os}}"
     runs-on: "${{matrix.os}}"
-    continue-on-error: true
+
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        # Do not forget to bump every 6 months!
-        gover: ["1.21"]
     permissions:
       security-events: write
     steps:
-    - uses: actions/checkout@v3
-    - uses: actions/setup-go@v4
+    - uses: actions/checkout@v7
+    - uses: actions/setup-go@v7
       with:
-        go-version: "~${{matrix.gover}}.0"
+        go-version: '1.27.x'
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@v2
+      uses: github/codeql-action/init@v4
       with:
         languages: go
     - name: Autobuild
-      uses: github/codeql-action/autobuild@v2
+      uses: github/codeql-action/autobuild@v4
     - name: Perform CodeQL Analysis
-      uses: github/codeql-action/analyze@v2
+      uses: github/codeql-action/analyze@v4
