@@ -7,7 +7,6 @@ package loghttp_test
 import (
 	"bytes"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -35,7 +34,10 @@ func TestServeHTTP(t *testing.T) {
 	h := loghttp.Handler{Handler: &dummy{}}
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
-	r, _ := ioutil.ReadAll(w.Result().Body)
+	r, err := io.ReadAll(w.Result().Body)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if s := string(r); s != "hello" {
 		t.Fatalf("%q != \"hello\"", s)
 	}
