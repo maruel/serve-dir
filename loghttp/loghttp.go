@@ -27,10 +27,11 @@ type Handler struct {
 // It logs the handler's HTTP status code and the response size.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	received := time.Now()
-	rwh := responseWriteHijacker{responseWriter: responseWriter{ResponseWriter: w}}
-	w = &rwh
+	rwh := responseWriteHijacker{ResponseWriter: w}
 	// Not all ResponseWriter implement Hijack, so query its support upfront.
-	if _, ok := w.(http.Hijacker); !ok {
+	if _, ok := w.(http.Hijacker); ok {
+		w = &rwh
+	} else {
 		w = &rwh.responseWriter
 	}
 	defer func() {
@@ -51,6 +52,7 @@ func defaultOnDone(r *http.Request, received time.Time, status, length int, hija
 
 type responseWriter struct {
 	http.ResponseWriter
+
 	length int
 	status int
 }
@@ -71,6 +73,7 @@ func (r *responseWriter) WriteHeader(status int) {
 
 type responseWriteHijacker struct {
 	responseWriter
+
 	hijacked bool
 }
 
@@ -79,8 +82,12 @@ type responseWriteHijacker struct {
 // TODO(maruel): For now the write length is lost, it would require querying
 // the ReadWriter and overriding Conn.Write().
 func (r *responseWriteHijacker) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	hijacker, ok := r.ResponseWriter.(http.Hijacker)
+	if !ok {
+		return nil, nil, http.ErrNotSupported
+	}
 	r.hijacked = true
-	return r.ResponseWriter.(http.Hijacker).Hijack()
+	return hijacker.Hijack()
 }
 
 //

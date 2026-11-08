@@ -32,7 +32,8 @@ func ExampleHandler() {
 }
 
 func TestServeHTTP(t *testing.T) {
-	req := httptest.NewRequest(http.MethodGet, "/foo", &bytes.Buffer{})
+	t.Parallel()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/foo", &bytes.Buffer{})
 	h := loghttp.Handler{Handler: &dummy{}}
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -43,6 +44,16 @@ func TestServeHTTP(t *testing.T) {
 	if s := string(r); s != "hello" {
 		t.Fatalf("%q != \"hello\"", s)
 	}
+}
+
+func TestHandlerWithoutHijacker(t *testing.T) {
+	t.Parallel()
+	h := loghttp.Handler{Handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		if _, ok := w.(http.Hijacker); ok {
+			t.Error("wrapper advertises hijacking when the underlying writer cannot hijack")
+		}
+	})}
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
 }
 
 type dummy struct {
